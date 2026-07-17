@@ -55,6 +55,15 @@ export class WaybillsService {
     return waybill;
   }
 
+  async addDeliveryPhoto(companyId: string, id: string, photoUrl: string) {
+    const waybill = await this.findOne(companyId, id);
+    const existing = (waybill.deliveryPhotos as string[] | null) ?? [];
+    return this.prisma.waybill.update({
+      where: { id },
+      data: { deliveryPhotos: [...existing, photoUrl] },
+    });
+  }
+
   async recordProofOfDelivery(companyId: string, id: string, input: RecordProofOfDeliveryInput) {
     const waybill = await this.findOne(companyId, id);
     if (waybill.signedAt) {
