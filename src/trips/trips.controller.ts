@@ -32,24 +32,24 @@ export class TripsController {
 
   @Get()
   findAll(@CurrentUser() user: AuthUser, @Query('status') status?: TripStatus) {
-    return this.tripsService.findAll(user.companyId, status);
+    return this.tripsService.findAllForUser(user.companyId, user, status);
   }
 
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.tripsService.findOne(user.companyId, id);
+    return this.tripsService.findOneForUser(user.companyId, id, user);
   }
 
   @Roles('COMPANY_ADMIN', 'DISPATCHER', 'DRIVER')
   @Patch(':id/start')
   start(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.tripsService.start(user.companyId, id);
+    return this.tripsService.start(user.companyId, id, user);
   }
 
   @Roles('COMPANY_ADMIN', 'DISPATCHER', 'DRIVER')
   @Patch(':id/complete')
   complete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.tripsService.complete(user.companyId, id);
+    return this.tripsService.complete(user.companyId, id, user);
   }
 
   @Roles('COMPANY_ADMIN', 'DISPATCHER')

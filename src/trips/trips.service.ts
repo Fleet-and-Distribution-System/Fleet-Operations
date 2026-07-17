@@ -63,6 +63,32 @@ export class TripsService {
     });
   }
 
+  async findAllForUser(
+    companyId: string,
+    user: { userId: string; role: string },
+    status?: TripStatus,
+  ) {
+    if (user.role !== 'DRIVER') {
+      return this.findAll(companyId, status);
+    }
+
+    const driver = await this.prisma.driver.findFirst({
+      where: { companyId, userId: user.userId },
+      select: { id: true },
+    });
+    if (!driver) return [];
+
+    return this.prisma.trip.findMany({
+      where: { companyId, driverId: driver.id, ...(status ? { status } : {}) },
+      include: {
+        transportOrder: { select: { orderNumber: true, pickupLocation: true, destinationLocation: true } },
+        vehicle: { select: { plateNumber: true } },
+        driver: { select: { fullName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   findAll(companyId: string, status?: TripStatus) {
     return this.prisma.trip.findMany({
       where: { companyId, ...(status ? { status } : {}) },
@@ -75,6 +101,20 @@ export class TripsService {
     });
   }
 
+  async findOneForUser(companyId: string, id: string, user: { userId: string; role: string }) {
+    const trip = await this.findOne(companyId, id);
+    if (user.role === 'DRIVER') {
+      const driver = await this.prisma.driver.findFirst({
+        where: { companyId, userId: user.userId },
+        select: { id: true },
+      });
+      if (!driver || trip.driverId !== driver.id) {
+        throw new NotFoundException('Trip not found');
+      }
+    }
+    return trip;
+  }
+
   async findOne(companyId: string, id: string) {
     const trip = await this.prisma.trip.findFirst({
       where: { id, companyId },
@@ -84,8 +124,9 @@ export class TripsService {
     return trip;
   }
 
-  async start(companyId: string, id: string) {
+  async start(companyId: string, id: string, requestingUser?: { userId: string; role: string }) {
     const trip = await this.findOne(companyId, id);
+    await this.assertOwnershipIfDriver(companyId, trip, requestingUser);
     if (trip.status !== TripStatus.ASSIGNED) {
       throw new BadRequestException(`Trip is ${trip.status}, cannot start`);
     }
@@ -106,8 +147,9 @@ export class TripsService {
     });
   }
 
-  async complete(companyId: string, id: string) {
+  async complete(companyId: string, id: string, requestingUser?: { userId: string; role: string }) {
     const trip = await this.findOne(companyId, id);
+    await this.assertOwnershipIfDriver(companyId, trip, requestingUser);
     if (trip.status !== TripStatus.IN_TRANSIT) {
       throw new BadRequestException(`Trip is ${trip.status}, cannot complete`);
     }
@@ -126,6 +168,21 @@ export class TripsService {
       });
       return updated;
     });
+  }
+
+  private async assertOwnershipIfDriver(
+    companyId: string,
+    trip: { driverId: string },
+    requestingUser?: { userId: string; role: string },
+  ) {
+    if (!requestingUser || requestingUser.role !== 'DRIVER') return;
+    const driver = await this.prisma.driver.findFirst({
+      where: { companyId, userId: requestingUser.userId },
+      select: { id: true },
+    });
+    if (!driver || trip.driverId !== driver.id) {
+      throw new NotFoundException('Trip not found');
+    }
   }
 
   async cancel(companyId: string, id: string) {
