@@ -1,0 +1,292 @@
+// Fleet SaaS — Phase 0 core schema
+// Multi-tenancy pattern: shared schema, every business table carries companyId.
+// Every query MUST be scoped by companyId (enforced in a Prisma middleware — see src/common/tenant.middleware.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN   // Anthropic-of-the-platform level — manages tenants, not fleet ops
+  COMPANY_ADMIN // Owns a Company (tenant)
+  DISPATCHER
+  DRIVER
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  LOADING
+  IN_TRANSIT
+  DELIVERED
+  MAINTENANCE
+  ACCIDENT
+  BREAKDOWN
+  PARKED
+  INACTIVE
+}
+
+enum TripStatus {
+  PENDING
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum LocationType {
+  DEPOT
+  WAREHOUSE
+  CUSTOMER_SITE
+  LOADING_POINT
+  OTHER
+}
+
+// ---- Tenant root ----
+
+model Company {
+  id            String    @id @default(uuid())
+  name          String
+  slug          String    @unique
+  planTier      String    @default("trial") // trial | starter | growth | enterprise
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  users          User[]
+  vehicles       Vehicle[]
+  drivers        Driver[]
+  customers      Customer[]
+  locations      Location[]
+  transportOrders TransportOrder[]
+  trips          Trip[]
+  waybills       Waybill[]
+}
+
+// ---- Identity ----
+
+model User {
+  id            String    @id @default(uuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id])
+
+  email         String
+  phone         String?
+  passwordHash  String
+  fullName      String
+  role          UserRole  @default(DISPATCHER)
+  isActive      Boolean   @default(true)
+
+  driverProfile Driver?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([companyId, email])
+  @@unique([companyId, phone])
+  @@index([companyId])
+}
+
+// ---- Fleet ----
+
+model Vehicle {
+  id              String        @id @default(uuid())
+  companyId       String
+  company         Company       @relation(fields: [companyId], references: [id])
+
+  plateNumber     String
+  fleetNumber     String?
+  vin             String?
+  make            String?
+  model           String?
+  year            Int?
+  vehicleType     String?
+  capacity        Float?
+  fuelType        String?
+  currentOdometer Float?        @default(0)
+  status          VehicleStatus @default(AVAILABLE)
+
+  assignedDriverId String?
+  assignedDriver    Driver?      @relation(fields: [assignedDriverId], references: [id])
+
+  trips           Trip[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([companyId, plateNumber])
+  @@index([companyId])
+}
+
+model Driver {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
+
+  userId          String?   @unique
+  user            User?     @relation(fields: [userId], references: [id])
+
+  fullName        String
+  phone           String?
+  licenseNumber   String?
+  licenseExpiry   DateTime?
+  isActive        Boolean   @default(true)
+
+  vehicles        Vehicle[]
+  trips           Trip[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+// ---- Reference locations (depots, warehouses, customer sites) ----
+// Adapted from the reference system's Locations concept: named, reusable places
+// instead of free-text pickup/destination strings. Makes reporting and geofencing
+// (Phase 3) far easier than parsing addresses out of text fields later.
+
+model Location {
+  id        String       @id @default(uuid())
+  companyId String
+  company   Company      @relation(fields: [companyId], references: [id])
+
+  name      String
+  type      LocationType @default(OTHER)
+  address   String?
+  lat       Float?
+  lng       Float?
+  isActive  Boolean      @default(true)
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([companyId])
+}
+
+// ---- Commercial ----
+
+model Customer {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
+
+  name            String
+  contactName     String?
+  contactEmail    String?
+  contactPhone    String?
+  billingAddress  String?
+  deliveryAddress String?
+
+  transportOrders TransportOrder[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+model TransportOrder {
+  id              String       @id @default(uuid())
+  companyId       String
+  company         Company      @relation(fields: [companyId], references: [id])
+
+  orderNumber     String
+  customerId      String
+  customer        Customer     @relation(fields: [customerId], references: [id])
+
+  pickupLocation     String
+  destinationLocation String
+  cargoDescription   String?
+  weightKg           Float?
+  priority           String?    @default("normal") // normal | high | urgent
+  requestedDeliveryDate DateTime?
+  status             OrderStatus @default(PENDING)
+
+  trip            Trip?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([companyId, orderNumber])
+  @@index([companyId])
+}
+
+// ---- Operations ----
+
+model Trip {
+  id              String      @id @default(uuid())
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id])
+
+  transportOrderId String    @unique
+  transportOrder    TransportOrder @relation(fields: [transportOrderId], references: [id])
+
+  vehicleId       String
+  vehicle         Vehicle     @relation(fields: [vehicleId], references: [id])
+
+  driverId        String
+  driver          Driver      @relation(fields: [driverId], references: [id])
+
+  status          TripStatus  @default(PENDING)
+
+  plannedDeparture DateTime?
+  actualDeparture  DateTime?
+  plannedArrival   DateTime?
+  actualArrival    DateTime?
+
+  // Multi-stop support, adapted from the reference system's stops/stopsdate JSON pattern.
+  // Each entry: { locationId?, address, sequence, plannedTime?, arrivedAt? }
+  // Kept as JSON rather than a separate table for now — revisit as a TripStop model
+  // if you need per-stop querying/reporting later.
+  stops           Json?
+
+  tripCost        Float?
+
+  waybill         Waybill?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([companyId])
+}
+
+model Waybill {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
+
+  tripId          String    @unique
+  trip            Trip      @relation(fields: [tripId], references: [id])
+
+  waybillNumber   String
+  sealNumber      String?
+  productsSummary String?
+  pdfUrl          String?   // S3 object URL once generated
+
+  // Proof of delivery — adapted from reference system's receiver/picture fields
+  // on the delivery record. Kept here on Waybill since POD is conceptually tied
+  // to the delivery document, not the trip logistics itself.
+  receiverName    String?
+  receiverPhone   String?
+  deliveryPhotos  Json?     // array of S3 URLs
+  signedByName    String?
+  signedAt        DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([companyId, waybillNumber])
+  @@index([companyId])
+}
