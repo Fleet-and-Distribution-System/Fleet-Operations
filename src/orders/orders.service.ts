@@ -7,7 +7,7 @@ export interface CreateOrderInput {
   pickupLocation: string;
   destinationLocation: string;
   cargoDescription?: string;
-  weightKg?: number;
+  quantityLitres?: number;
   priority?: string;
   requestedDeliveryDate?: Date;
 }

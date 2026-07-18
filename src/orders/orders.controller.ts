@@ -11,7 +11,7 @@ class CreateOrderDto {
   @IsString() pickupLocation: string;
   @IsString() destinationLocation: string;
   @IsOptional() @IsString() cargoDescription?: string;
-  @IsOptional() @IsNumber() weightKg?: number;
+  @IsOptional() @IsNumber() quantityLitres?: number;
   @IsOptional() @IsIn(['normal', 'high', 'urgent']) priority?: string;
   @IsOptional() @IsDateString() requestedDeliveryDate?: string;
 }

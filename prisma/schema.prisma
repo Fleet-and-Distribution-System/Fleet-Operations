@@ -202,7 +202,7 @@ model TransportOrder {
   pickupLocation     String
   destinationLocation String
   cargoDescription   String?
-  weightKg           Float?
+  quantityLitres     Float?
   priority           String?    @default("normal") // normal | high | urgent
   requestedDeliveryDate DateTime?
   status             OrderStatus @default(PENDING)
