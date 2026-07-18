@@ -55,6 +55,24 @@ export class WaybillsService {
     return waybill;
   }
 
+  async findOneWithFullDetails(companyId: string, id: string) {
+    const waybill = await this.prisma.waybill.findFirst({
+      where: { id, companyId },
+      include: {
+        company: { select: { name: true } },
+        trip: {
+          include: {
+            transportOrder: { select: { orderNumber: true, pickupLocation: true, destinationLocation: true } },
+            vehicle: { select: { plateNumber: true } },
+            driver: { select: { fullName: true } },
+          },
+        },
+      },
+    });
+    if (!waybill) throw new NotFoundException('Waybill not found');
+    return waybill;
+  }
+
   async addDeliveryPhoto(companyId: string, id: string, photoUrl: string) {
     const waybill = await this.findOne(companyId, id);
     const existing = (waybill.deliveryPhotos as string[] | null) ?? [];
