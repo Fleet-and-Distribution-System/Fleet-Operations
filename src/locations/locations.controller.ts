@@ -1,15 +1,13 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { IsBoolean, IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 import { LocationsService } from './locations.service';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
 import { Roles, RolesGuard } from '../auth/roles.guard';
-import { LocationType } from '@prisma/client';
 
 class CreateLocationDto {
   @IsString() name: string;
-  @IsOptional() @IsIn(['DEPOT', 'WAREHOUSE', 'CUSTOMER_SITE', 'LOADING_POINT', 'OTHER'])
-  type?: LocationType;
+  @IsOptional() @IsString() type?: string;
   @IsOptional() @IsString() address?: string;
   @IsOptional() @IsNumber() lat?: number;
   @IsOptional() @IsNumber() lng?: number;
@@ -17,8 +15,7 @@ class CreateLocationDto {
 
 class UpdateLocationDto {
   @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsIn(['DEPOT', 'WAREHOUSE', 'CUSTOMER_SITE', 'LOADING_POINT', 'OTHER'])
-  type?: LocationType;
+  @IsOptional() @IsString() type?: string;
   @IsOptional() @IsString() address?: string;
   @IsOptional() @IsNumber() lat?: number;
   @IsOptional() @IsNumber() lng?: number;

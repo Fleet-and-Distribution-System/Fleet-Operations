@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { LocationType } from '@prisma/client';
+
 import { PrismaService } from '../common/prisma.service';
 
 export interface CreateLocationInput {
   name: string;
-  type?: LocationType;
+  type?: string;
   address?: string;
   lat?: number;
   lng?: number;

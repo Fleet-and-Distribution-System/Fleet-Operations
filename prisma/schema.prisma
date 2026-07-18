@@ -46,13 +46,6 @@ enum OrderStatus {
   CANCELLED
 }
 
-enum LocationType {
-  DEPOT
-  WAREHOUSE
-  CUSTOMER_SITE
-  LOADING_POINT
-  OTHER
-}
 
 // ---- Tenant root ----
 
@@ -163,7 +156,7 @@ model Location {
   company   Company      @relation(fields: [companyId], references: [id])
 
   name      String
-  type      LocationType @default(OTHER)
+  type      String?      @default("Other")
   address   String?
   lat       Float?
   lng       Float?
