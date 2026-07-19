@@ -19,6 +19,10 @@ class SetCostDto {
   @IsNumber() tripCost: number;
 }
 
+class SetRevenueDto {
+  @IsNumber() revenue: number;
+}
+
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('trips')
 export class TripsController {
@@ -60,6 +64,12 @@ export class TripsController {
   @Patch(':id/cost')
   setCost(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SetCostDto) {
     return this.tripsService.setCost(user.companyId, id, dto.tripCost);
+  }
+
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
+  @Patch(':id/revenue')
+  setRevenue(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SetRevenueDto) {
+    return this.tripsService.setRevenue(user.companyId, id, dto.revenue);
   }
 
   @Roles('COMPANY_ADMIN', 'DISPATCHER')

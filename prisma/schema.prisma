@@ -246,6 +246,7 @@ model Trip {
   stops           Json?
 
   tripCost        Float?
+  revenue         Float?
 
   waybill         Waybill?
 

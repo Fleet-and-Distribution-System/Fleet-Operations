@@ -190,6 +190,11 @@ export class TripsService {
     return this.prisma.trip.update({ where: { id }, data: { tripCost } });
   }
 
+  async setRevenue(companyId: string, id: string, revenue: number) {
+    await this.findOne(companyId, id);
+    return this.prisma.trip.update({ where: { id }, data: { revenue } });
+  }
+
   async cancel(companyId: string, id: string) {
     const trip = await this.findOne(companyId, id);
     if (trip.status === TripStatus.DELIVERED || trip.status === TripStatus.CANCELLED) {
