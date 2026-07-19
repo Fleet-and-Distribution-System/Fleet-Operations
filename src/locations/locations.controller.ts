@@ -36,11 +36,13 @@ export class LocationsController {
     return this.locationsService.create(user.companyId, dto);
   }
 
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get()
   findAll(@CurrentUser() user: AuthUser) {
     return this.locationsService.findAll(user.companyId);
   }
 
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.locationsService.findOne(user.companyId, id);

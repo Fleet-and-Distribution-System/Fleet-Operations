@@ -37,11 +37,13 @@ export class WaybillsController {
     return this.waybillsService.create(user.companyId, dto, user);
   }
 
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get()
   findAll(@CurrentUser() user: AuthUser) {
     return this.waybillsService.findAll(user.companyId);
   }
 
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.waybillsService.findOne(user.companyId, id);

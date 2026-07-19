@@ -34,11 +34,13 @@ export class CustomersController {
     return this.customersService.create(user.companyId, dto);
   }
 
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get()
   findAll(@CurrentUser() user: AuthUser) {
     return this.customersService.findAll(user.companyId);
   }
 
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.customersService.findOne(user.companyId, id);

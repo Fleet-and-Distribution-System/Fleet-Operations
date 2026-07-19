@@ -35,11 +35,13 @@ export class OrdersController {
     });
   }
 
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get()
   findAll(@CurrentUser() user: AuthUser, @Query('status') status?: OrderStatus) {
     return this.ordersService.findAll(user.companyId, status);
   }
 
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.ordersService.findOne(user.companyId, id);
