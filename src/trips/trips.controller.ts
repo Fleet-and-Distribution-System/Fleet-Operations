@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { IsArray, IsDateString, IsOptional, IsUUID } from 'class-validator';
+import { IsArray, IsDateString, IsNumber, IsOptional, IsUUID } from 'class-validator';
 import { TripsService } from './trips.service';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
 import { Roles, RolesGuard } from '../auth/roles.guard';
@@ -13,6 +13,10 @@ class CreateTripDto {
   @IsOptional() @IsDateString() plannedDeparture?: string;
   @IsOptional() @IsDateString() plannedArrival?: string;
   @IsOptional() @IsArray() stops?: unknown[];
+}
+
+class SetCostDto {
+  @IsNumber() tripCost: number;
 }
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -50,6 +54,12 @@ export class TripsController {
   @Patch(':id/complete')
   complete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.tripsService.complete(user.companyId, id, user);
+  }
+
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
+  @Patch(':id/cost')
+  setCost(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SetCostDto) {
+    return this.tripsService.setCost(user.companyId, id, dto.tripCost);
   }
 
   @Roles('COMPANY_ADMIN', 'DISPATCHER')
