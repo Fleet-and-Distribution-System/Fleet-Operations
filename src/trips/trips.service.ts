@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { TripStatus, OrderStatus, VehicleStatus } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
+import { EmailService } from '../common/email.service';
 
 export interface CreateTripInput {
   transportOrderId: string;
@@ -13,7 +14,10 @@ export interface CreateTripInput {
 
 @Injectable()
 export class TripsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+  ) {}
 
   async create(companyId: string, input: CreateTripInput) {
     const [order, vehicle, driver] = await Promise.all([
@@ -35,8 +39,8 @@ export class TripsService {
       throw new BadRequestException('Driver is not active');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const trip = await tx.trip.create({
+    const trip = await this.prisma.$transaction(async (tx) => {
+      const newTrip = await tx.trip.create({
         data: {
           companyId,
           transportOrderId: input.transportOrderId,
@@ -59,7 +63,28 @@ export class TripsService {
         data: { status: VehicleStatus.LOADING },
       });
 
-      return trip;
+      return newTrip;
+    });
+
+    this.notifyCustomerOfDispatch(companyId, order).catch(() => {});
+
+    return trip;
+  }
+
+  private async notifyCustomerOfDispatch(companyId: string, order: { id: string; orderNumber: string; pickupLocation: string; destinationLocation: string; customerId: string }) {
+    const [company, customer] = await Promise.all([
+      this.prisma.company.findUnique({ where: { id: companyId }, select: { name: true, slug: true } }),
+      this.prisma.customer.findUnique({ where: { id: order.customerId }, select: { contactEmail: true } }),
+    ]);
+    if (!company || !customer?.contactEmail) return;
+
+    await this.emailService.sendDispatchNotification({
+      toEmail: customer.contactEmail,
+      companyName: company.name,
+      companySlug: company.slug,
+      orderNumber: order.orderNumber,
+      pickupLocation: order.pickupLocation,
+      destinationLocation: order.destinationLocation,
     });
   }
 
@@ -170,6 +195,16 @@ export class TripsService {
     });
   }
 
+  async setCost(companyId: string, id: string, tripCost: number) {
+    await this.findOne(companyId, id);
+    return this.prisma.trip.update({ where: { id }, data: { tripCost } });
+  }
+
+  async setRevenue(companyId: string, id: string, revenue: number) {
+    await this.findOne(companyId, id);
+    return this.prisma.trip.update({ where: { id }, data: { revenue } });
+  }
+
   private async assertOwnershipIfDriver(
     companyId: string,
     trip: { driverId: string },
@@ -183,16 +218,6 @@ export class TripsService {
     if (!driver || trip.driverId !== driver.id) {
       throw new NotFoundException('Trip not found');
     }
-  }
-
-  async setCost(companyId: string, id: string, tripCost: number) {
-    await this.findOne(companyId, id);
-    return this.prisma.trip.update({ where: { id }, data: { tripCost } });
-  }
-
-  async setRevenue(companyId: string, id: string, revenue: number) {
-    await this.findOne(companyId, id);
-    return this.prisma.trip.update({ where: { id }, data: { revenue } });
   }
 
   async cancel(companyId: string, id: string) {
