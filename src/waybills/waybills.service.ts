@@ -18,9 +18,19 @@ export interface RecordProofOfDeliveryInput {
 export class WaybillsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: string, input: CreateWaybillInput) {
+  async create(companyId: string, input: CreateWaybillInput, requestingUser?: { userId: string; role: string }) {
     const trip = await this.prisma.trip.findFirst({ where: { id: input.tripId, companyId } });
     if (!trip) throw new BadRequestException('Trip not found for this company');
+
+    if (requestingUser?.role === 'DRIVER') {
+      const driver = await this.prisma.driver.findFirst({
+        where: { companyId, userId: requestingUser.userId },
+        select: { id: true },
+      });
+      if (!driver || trip.driverId !== driver.id) {
+        throw new BadRequestException('Trip not found for this company');
+      }
+    }
 
     const existing = await this.prisma.waybill.findUnique({ where: { tripId: input.tripId } });
     if (existing) throw new BadRequestException('This trip already has a waybill');

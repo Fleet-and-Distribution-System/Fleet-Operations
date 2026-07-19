@@ -31,10 +31,10 @@ export class WaybillsController {
     private pdfService: PdfService,
   ) {}
 
-  @Roles('COMPANY_ADMIN', 'DISPATCHER')
+  @Roles('COMPANY_ADMIN', 'DISPATCHER', 'DRIVER')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateWaybillDto) {
-    return this.waybillsService.create(user.companyId, dto);
+    return this.waybillsService.create(user.companyId, dto, user);
   }
 
   @Get()
