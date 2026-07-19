@@ -28,6 +28,10 @@ class SetActiveDto {
   @IsBoolean() isActive: boolean;
 }
 
+class ResetPasswordDto {
+  @IsString() @MinLength(6) newPassword: string;
+}
+
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('drivers')
 export class DriversController {
@@ -65,5 +69,11 @@ export class DriversController {
   @Patch(':id/active')
   setActive(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SetActiveDto) {
     return this.driversService.setActive(user.companyId, id, dto.isActive);
+  }
+
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
+  @Patch(':id/reset-password')
+  resetPassword(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ResetPasswordDto) {
+    return this.driversService.resetPassword(user.companyId, id, dto.newPassword);
   }
 }

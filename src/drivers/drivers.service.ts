@@ -1,6 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
 
 export interface CreateDriverInput {
@@ -32,27 +32,37 @@ export class DriversService {
 
     const passwordHash = await bcrypt.hash(loginPassword, 10);
 
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          companyId,
-          email: loginEmail ?? `${input.phone ?? Date.now()}@no-email.local`,
-          phone: loginPhone,
-          passwordHash,
-          fullName: input.fullName,
-          role: UserRole.DRIVER,
-        },
-      });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            companyId,
+            email: loginEmail ?? `${input.phone ?? Date.now()}@no-email.local`,
+            phone: loginPhone,
+            passwordHash,
+            fullName: input.fullName,
+            role: UserRole.DRIVER,
+          },
+        });
 
-      return tx.driver.create({
-        data: {
-          ...driverFields,
-          companyId,
-          userId: user.id,
-        },
-        include: { user: { select: { id: true, email: true, phone: true, role: true } } },
+        return tx.driver.create({
+          data: {
+            ...driverFields,
+            companyId,
+            userId: user.id,
+          },
+          include: { user: { select: { id: true, email: true, phone: true, role: true } } },
+        });
       });
-    });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const target = (err.meta?.target as string[] | undefined)?.join(', ') ?? 'field';
+        throw new ConflictException(
+          `A user with this ${target.includes('phone') ? 'phone number' : target.includes('email') ? 'email' : target} already exists.`,
+        );
+      }
+      throw err;
+    }
   }
 
   findAll(companyId: string) {
@@ -85,5 +95,19 @@ export class DriversService {
       await this.prisma.user.update({ where: { id: driver.userId }, data: { isActive } });
     }
     return this.prisma.driver.update({ where: { id }, data: { isActive } });
+  }
+
+  // Admin/dispatcher-initiated reset — no current-password check, since the
+  // whole point is recovering access when the driver has forgotten it. Only
+  // an admin/dispatcher role can reach this (enforced in the controller),
+  // and it only works on a driver that already has a linked login.
+  async resetPassword(companyId: string, id: string, newPassword: string) {
+    const driver = await this.findOne(companyId, id);
+    if (!driver.userId) {
+      throw new BadRequestException('This driver has no login account to reset');
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: driver.userId }, data: { passwordHash } });
+    return { success: true };
   }
 }
