@@ -1,6 +1,8 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
+import { CurrentUser, AuthUser } from '../common/current-user.decorator';
 
 class RegisterCompanyDto {
   @IsString() companyName: string;
@@ -13,8 +15,13 @@ class RegisterCompanyDto {
 
 class LoginDto {
   @IsString() companySlug: string;
-  @IsString() identifier: string; // email or phone
+  @IsString() identifier: string;
   @IsString() password: string;
+}
+
+class ChangePasswordDto {
+  @IsString() currentPassword: string;
+  @IsString() @MinLength(6) newPassword: string;
 }
 
 @Controller('auth')
@@ -29,5 +36,11 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto.identifier, dto.password, dto.companySlug);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('change-password')
+  changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(user.userId, dto.currentPassword, dto.newPassword);
   }
 }
