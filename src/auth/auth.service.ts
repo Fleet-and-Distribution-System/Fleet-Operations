@@ -66,7 +66,7 @@ export class AuthService {
 
   private issueToken(userId: string, companyId: string, role: string, email: string) {
     const accessToken = this.jwt.sign({ sub: userId, companyId, role, email });
-    return { accessToken };
+    return { accessToken, role };
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
