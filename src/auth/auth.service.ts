@@ -10,8 +10,6 @@ export class AuthService {
     private jwt: JwtService,
   ) {}
 
-  // Registers a brand-new tenant (Company) plus its first admin user.
-  // This is the "onboarding" entry point referenced in the roadmap (Phase 0).
   async registerCompany(params: {
     companyName: string;
     companySlug: string;
@@ -50,9 +48,6 @@ export class AuthService {
     const company = await this.prisma.company.findUnique({ where: { slug: companySlug } });
     if (!company) throw new UnauthorizedException('Invalid credentials');
 
-    // Basic heuristic: contains "@" -> treat as email, otherwise treat as phone.
-    // Keep validation format-agnostic here (no country-specific regex) since phone
-    // formats vary by market; normalize/validate more strictly at signup time instead.
     const isEmail = identifier.includes('@');
 
     const user = await this.prisma.user.findFirst({
@@ -72,5 +67,17 @@ export class AuthService {
   private issueToken(userId: string, companyId: string, role: string, email: string) {
     const accessToken = this.jwt.sign({ sub: userId, companyId, role, email });
     return { accessToken };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('User not found');
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) throw new UnauthorizedException('Current password is incorrect');
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { success: true };
   }
 }
