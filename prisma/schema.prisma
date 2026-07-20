@@ -207,7 +207,11 @@ model TransportOrder {
   customer        Customer     @relation(fields: [customerId], references: [id])
 
   pickupLocation     String
+  pickupLat          Float?
+  pickupLng          Float?
   destinationLocation String
+  destinationLat     Float?
+  destinationLng     Float?
   cargoDescription   String?
   quantityLitres     Float?
   priority           String?    @default("normal") // normal | high | urgent
