@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 import { VehiclesService } from './vehicles.service';
+import { CloudinaryService } from '../common/cloudinary.service';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
 import { Roles, RolesGuard } from '../auth/roles.guard';
 import { VehicleStatus } from '@prisma/client';
@@ -30,7 +32,10 @@ class AssignDriverDto {
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('vehicles')
 export class VehiclesController {
-  constructor(private vehiclesService: VehiclesService) {}
+  constructor(
+    private vehiclesService: VehiclesService,
+    private cloudinary: CloudinaryService,
+  ) {}
 
   @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Post()
@@ -60,5 +65,21 @@ export class VehiclesController {
   @Patch(':id/assign-driver')
   assignDriver(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: AssignDriverDto) {
     return this.vehiclesService.assignDriver(user.companyId, id, dto.driverId ?? null);
+  }
+
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
+  @Post(':id/photo')
+  @UseInterceptors(FileInterceptor('photo'))
+  async uploadPhoto(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('No photo file provided (field name must be "photo")');
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are accepted');
+    }
+    const url = await this.cloudinary.uploadImage(file.buffer, `fleet-ops/${user.companyId}/vehicles/${id}`);
+    return this.vehiclesService.setPhoto(user.companyId, id, url);
   }
 }

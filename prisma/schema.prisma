@@ -109,6 +109,7 @@ model Vehicle {
   vehicleType     String?
   capacity        Float?
   fuelType        String?
+  photoUrl        String?
   currentOdometer Float?        @default(0)
   status          VehicleStatus @default(AVAILABLE)
 
@@ -138,6 +139,7 @@ model Driver {
   phone           String?
   licenseNumber   String?
   licenseExpiry   DateTime?
+  photoUrl        String?
   isActive        Boolean   @default(true)
 
   vehicles        Vehicle[]
@@ -253,6 +255,7 @@ model Trip {
   revenue         Float?
 
   waybill         Waybill?
+  fuelLogs        FuelLog[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -322,6 +325,9 @@ model FuelLog {
   vehicleId       String
   vehicle         Vehicle   @relation(fields: [vehicleId], references: [id])
 
+  tripId          String?
+  trip            Trip?     @relation(fields: [tripId], references: [id])
+
   quantity        Float
   unit            String
   cost            Float?
@@ -334,4 +340,5 @@ model FuelLog {
 
   @@index([companyId])
   @@index([vehicleId])
+  @@index([tripId])
 }

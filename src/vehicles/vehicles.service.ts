@@ -14,10 +14,6 @@ export interface CreateVehicleInput {
   fuelType?: string;
 }
 
-// PATTERN TO REPEAT: every method takes companyId explicitly (sourced from the
-// verified JWT via @CurrentUser in the controller — never from the request body)
-// and every Prisma call filters or scopes by it. Copy this shape for Drivers,
-// Customers, TransportOrders, Trips, and Waybills.
 @Injectable()
 export class VehiclesService {
   constructor(private prisma: PrismaService) {}
@@ -44,7 +40,7 @@ export class VehiclesService {
   }
 
   async updateStatus(companyId: string, id: string, status: VehicleStatus) {
-    await this.findOne(companyId, id); // ensures tenant ownership before mutating
+    await this.findOne(companyId, id);
     return this.prisma.vehicle.update({
       where: { id },
       data: { status },
@@ -57,5 +53,10 @@ export class VehiclesService {
       where: { id: vehicleId },
       data: { assignedDriverId: driverId },
     });
+  }
+
+  async setPhoto(companyId: string, id: string, photoUrl: string) {
+    await this.findOne(companyId, id);
+    return this.prisma.vehicle.update({ where: { id }, data: { photoUrl } });
   }
 }

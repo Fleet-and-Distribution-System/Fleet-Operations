@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { IsBoolean, IsDateString, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { DriversService } from './drivers.service';
+import { CloudinaryService } from '../common/cloudinary.service';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
-import { Roles } from '../auth/roles.guard';
-import { RolesGuard } from '../auth/roles.guard';
+import { Roles, RolesGuard } from '../auth/roles.guard';
 
 class CreateDriverDto {
   @IsString() fullName: string;
@@ -35,7 +36,10 @@ class ResetPasswordDto {
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('drivers')
 export class DriversController {
-  constructor(private driversService: DriversService) {}
+  constructor(
+    private driversService: DriversService,
+    private cloudinary: CloudinaryService,
+  ) {}
 
   @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Post()
@@ -46,13 +50,11 @@ export class DriversController {
     });
   }
 
-  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get()
   findAll(@CurrentUser() user: AuthUser) {
     return this.driversService.findAll(user.companyId);
   }
 
-  @Roles('COMPANY_ADMIN', 'DISPATCHER')
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.driversService.findOne(user.companyId, id);
@@ -77,5 +79,21 @@ export class DriversController {
   @Patch(':id/reset-password')
   resetPassword(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ResetPasswordDto) {
     return this.driversService.resetPassword(user.companyId, id, dto.newPassword);
+  }
+
+  @Roles('COMPANY_ADMIN', 'DISPATCHER')
+  @Post(':id/photo')
+  @UseInterceptors(FileInterceptor('photo'))
+  async uploadPhoto(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('No photo file provided (field name must be "photo")');
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are accepted');
+    }
+    const url = await this.cloudinary.uploadImage(file.buffer, `fleet-ops/${user.companyId}/drivers/${id}`);
+    return this.driversService.setPhoto(user.companyId, id, url);
   }
 }

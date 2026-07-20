@@ -97,10 +97,6 @@ export class DriversService {
     return this.prisma.driver.update({ where: { id }, data: { isActive } });
   }
 
-  // Admin/dispatcher-initiated reset — no current-password check, since the
-  // whole point is recovering access when the driver has forgotten it. Only
-  // an admin/dispatcher role can reach this (enforced in the controller),
-  // and it only works on a driver that already has a linked login.
   async resetPassword(companyId: string, id: string, newPassword: string) {
     const driver = await this.findOne(companyId, id);
     if (!driver.userId) {
@@ -109,5 +105,10 @@ export class DriversService {
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({ where: { id: driver.userId }, data: { passwordHash } });
     return { success: true };
+  }
+
+  async setPhoto(companyId: string, id: string, photoUrl: string) {
+    await this.findOne(companyId, id);
+    return this.prisma.driver.update({ where: { id }, data: { photoUrl } });
   }
 }
