@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { IsArray, IsDateString, IsNumber, IsOptional, IsUUID } from 'class-validator';
+import { IsArray, IsDateString, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 import { TripsService } from './trips.service';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
 import { Roles, RolesGuard } from '../auth/roles.guard';
@@ -13,6 +13,11 @@ class CreateTripDto {
   @IsOptional() @IsDateString() plannedDeparture?: string;
   @IsOptional() @IsDateString() plannedArrival?: string;
   @IsOptional() @IsArray() stops?: unknown[];
+}
+
+class AddCheckpointDto {
+  @IsString() note: string;
+  @IsOptional() @IsString() location?: string;
 }
 
 class SetCostDto {
@@ -70,6 +75,17 @@ export class TripsController {
   @Patch(':id/revenue')
   setRevenue(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SetRevenueDto) {
     return this.tripsService.setRevenue(user.companyId, id, dto.revenue);
+  }
+
+  @Roles('COMPANY_ADMIN', 'DISPATCHER', 'DRIVER')
+  @Post(':id/checkpoints')
+  addCheckpoint(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: AddCheckpointDto) {
+    return this.tripsService.addCheckpoint(user.companyId, id, dto.note, dto.location, user.email);
+  }
+
+  @Get(':id/checkpoints')
+  listCheckpoints(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.tripsService.listCheckpoints(user.companyId, id);
   }
 
   @Roles('COMPANY_ADMIN', 'DISPATCHER')

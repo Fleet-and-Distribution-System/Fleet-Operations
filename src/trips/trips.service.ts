@@ -240,6 +240,25 @@ export class TripsService {
     }
   }
 
+  // Manual checkpoints — there is no GPS/telematics hardware on these
+  // trucks, so this is the practical substitute: a dispatcher or driver
+  // posts a quick text update, which shows up on both the internal trip
+  // view and the public tracking page as a real timeline.
+  async addCheckpoint(companyId: string, tripId: string, note: string, location: string | undefined, createdBy: string | undefined) {
+    await this.findOne(companyId, tripId);
+    return this.prisma.tripCheckpoint.create({
+      data: { companyId, tripId, note, location, createdBy },
+    });
+  }
+
+  async listCheckpoints(companyId: string, tripId: string) {
+    await this.findOne(companyId, tripId);
+    return this.prisma.tripCheckpoint.findMany({
+      where: { companyId, tripId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async cancel(companyId: string, id: string) {
     const trip = await this.findOne(companyId, id);
     if (trip.status === TripStatus.DELIVERED || trip.status === TripStatus.CANCELLED) {

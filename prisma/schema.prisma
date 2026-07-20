@@ -67,6 +67,7 @@ model Company {
   waybills       Waybill[]
   maintenanceRecords MaintenanceRecord[]
   fuelLogs       FuelLog[]
+  checkpoints    TripCheckpoint[]
 }
 
 // ---- Identity ----
@@ -255,6 +256,7 @@ model Trip {
   revenue         Float?
 
   waybill         Waybill?
+  checkpoints     TripCheckpoint[]
   fuelLogs        FuelLog[]
 
   createdAt       DateTime    @default(now())
@@ -340,5 +342,24 @@ model FuelLog {
 
   @@index([companyId])
   @@index([vehicleId])
+  @@index([tripId])
+}
+
+
+model TripCheckpoint {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+
+  note      String
+  location  String?
+  createdBy String?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
   @@index([tripId])
 }
