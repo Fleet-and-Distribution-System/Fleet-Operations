@@ -143,7 +143,13 @@ export class TripsService {
   async findOne(companyId: string, id: string) {
     const trip = await this.prisma.trip.findFirst({
       where: { id, companyId },
-      include: { transportOrder: true, vehicle: true, driver: true, waybill: true },
+      include: {
+        transportOrder: true,
+        vehicle: true,
+        driver: true,
+        waybill: true,
+        checkpoints: { orderBy: { createdAt: 'asc' } },
+      },
     });
     if (!trip) throw new NotFoundException('Trip not found');
     return trip;
