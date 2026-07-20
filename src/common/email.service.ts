@@ -38,4 +38,35 @@ export class EmailService {
       this.logger.error(`Failed to send dispatch email to ${params.toEmail}: ${err}`);
     }
   }
+
+  async sendDeliveryConfirmation(params: {
+    toEmail: string;
+    companyName: string;
+    companySlug: string;
+    orderNumber: string;
+    destinationLocation: string;
+  }) {
+    const trackingUrl = `https://fleet-and-distribution-system-production.up.railway.app/track/${params.companySlug}/${params.orderNumber}`;
+    try {
+      await this.resend.emails.send({
+        from: 'Fleet Ops <onboarding@resend.dev>',
+        to: params.toEmail,
+        subject: `Delivered: order ${params.orderNumber} — ${params.companyName}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2>${params.companyName}</h2>
+            <p>Your order <strong>${params.orderNumber}</strong> has been delivered to <strong>${params.destinationLocation}</strong>.</p>
+            <p>
+              <a href="${trackingUrl}" style="display:inline-block;background:#2e7d32;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;">
+                View delivery details
+              </a>
+            </p>
+            <p style="font-size:12px;color:#999;">Or copy this link: ${trackingUrl}</p>
+          </div>
+        `,
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send delivery confirmation to ${params.toEmail}: ${err}`);
+    }
+  }
 }

@@ -172,14 +172,30 @@ export class TripsService {
     });
   }
 
+  private async notifyCustomerOfDelivery(companyId: string, order: { orderNumber: string; destinationLocation: string; customerId: string }) {
+    const [company, customer] = await Promise.all([
+      this.prisma.company.findUnique({ where: { id: companyId }, select: { name: true, slug: true } }),
+      this.prisma.customer.findUnique({ where: { id: order.customerId }, select: { contactEmail: true } }),
+    ]);
+    if (!company || !customer?.contactEmail) return;
+
+    await this.emailService.sendDeliveryConfirmation({
+      toEmail: customer.contactEmail,
+      companyName: company.name,
+      companySlug: company.slug,
+      orderNumber: order.orderNumber,
+      destinationLocation: order.destinationLocation,
+    });
+  }
+
   async complete(companyId: string, id: string, requestingUser?: { userId: string; role: string }) {
     const trip = await this.findOne(companyId, id);
     await this.assertOwnershipIfDriver(companyId, trip, requestingUser);
     if (trip.status !== TripStatus.IN_TRANSIT) {
       throw new BadRequestException(`Trip is ${trip.status}, cannot complete`);
     }
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.trip.update({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.trip.update({
         where: { id },
         data: { status: TripStatus.DELIVERED, actualArrival: new Date() },
       });
@@ -191,8 +207,12 @@ export class TripsService {
         where: { id: trip.vehicleId },
         data: { status: VehicleStatus.AVAILABLE },
       });
-      return updated;
+      return result;
     });
+
+    this.notifyCustomerOfDelivery(companyId, trip.transportOrder).catch(() => {});
+
+    return updated;
   }
 
   async setCost(companyId: string, id: string, tripCost: number) {
