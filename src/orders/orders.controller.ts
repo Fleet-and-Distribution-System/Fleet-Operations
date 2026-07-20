@@ -9,7 +9,11 @@ import { OrderStatus } from '@prisma/client';
 class CreateOrderDto {
   @IsUUID() customerId: string;
   @IsString() pickupLocation: string;
+  @IsOptional() @IsNumber() pickupLat?: number;
+  @IsOptional() @IsNumber() pickupLng?: number;
   @IsString() destinationLocation: string;
+  @IsOptional() @IsNumber() destinationLat?: number;
+  @IsOptional() @IsNumber() destinationLng?: number;
   @IsOptional() @IsString() cargoDescription?: string;
   @IsOptional() @IsNumber() quantityLitres?: number;
   @IsOptional() @IsIn(['normal', 'high', 'urgent']) priority?: string;
