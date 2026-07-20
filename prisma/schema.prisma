@@ -65,6 +65,8 @@ model Company {
   transportOrders TransportOrder[]
   trips          Trip[]
   waybills       Waybill[]
+  maintenanceRecords MaintenanceRecord[]
+  fuelLogs       FuelLog[]
 }
 
 // ---- Identity ----
@@ -114,6 +116,8 @@ model Vehicle {
   assignedDriver    Driver?      @relation(fields: [assignedDriverId], references: [id])
 
   trips           Trip[]
+  maintenanceRecords MaintenanceRecord[]
+  fuelLogs        FuelLog[]
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -283,4 +287,51 @@ model Waybill {
 
   @@unique([companyId, waybillNumber])
   @@index([companyId])
+}
+
+
+model MaintenanceRecord {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
+
+  vehicleId       String
+  vehicle         Vehicle   @relation(fields: [vehicleId], references: [id])
+
+  serviceType     String
+  description     String?
+  cost            Float?
+  odometerAtService Float?
+  serviceDate     DateTime  @default(now())
+
+  nextDueDate     DateTime?
+  nextDueOdometer Float?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([vehicleId])
+}
+
+model FuelLog {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
+
+  vehicleId       String
+  vehicle         Vehicle   @relation(fields: [vehicleId], references: [id])
+
+  quantity        Float
+  unit            String
+  cost            Float?
+  odometerAtFueling Float?
+  fuelDate        DateTime  @default(now())
+  station         String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([vehicleId])
 }

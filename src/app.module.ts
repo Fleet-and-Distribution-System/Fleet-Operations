@@ -10,6 +10,8 @@ import { WaybillsModule } from './waybills/waybills.module';
 import { LocationsModule } from './locations/locations.module';
 import { CompaniesModule } from './companies/companies.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
+import { FuelModule } from './fuel/fuel.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { TrackingModule } from './tracking/tracking.module';
     LocationsModule,
     CompaniesModule,
     TrackingModule,
+    MaintenanceModule,
+    FuelModule,
   ],
 })
 export class AppModule {}
