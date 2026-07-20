@@ -17,6 +17,7 @@ export class TrackingService {
             vehicle: { select: { plateNumber: true } },
             driver: { select: { fullName: true } },
             waybill: { select: { waybillNumber: true, signedAt: true, signedByName: true } },
+            checkpoints: { orderBy: { createdAt: 'asc' } },
           },
         },
       },
@@ -42,6 +43,7 @@ export class TrackingService {
             waybillNumber: order.trip.waybill?.waybillNumber,
             signedAt: order.trip.waybill?.signedAt,
             signedByName: order.trip.waybill?.signedByName,
+            checkpoints: order.trip.checkpoints.map((cp) => ({ note: cp.note, createdAt: cp.createdAt })),
           }
         : null,
     };

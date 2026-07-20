@@ -62,6 +62,11 @@ export class TrackingController {
     .detail { font-size: 13px; color: #666; margin-top: 4px; }
     .detail strong { color: #333; }
     .footer { margin-top: 24px; font-size: 12px; color: #999; text-align: center; }
+    .checkpoints { margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; }
+    .checkpoint { display: flex; gap: 10px; margin-top: 10px; }
+    .cp-dot { width: 8px; height: 8px; border-radius: 50%; background: #496DDB; margin-top: 5px; flex-shrink: 0; }
+    .cp-note { font-size: 13px; color: #333; }
+    .cp-time { font-size: 11px; color: #999; }
   </style>
 </head>
 <body>
@@ -80,6 +85,16 @@ export class TrackingController {
     ${data.trip?.vehiclePlate ? `<p class="detail"><strong>Vehicle:</strong> ${data.trip.vehiclePlate}</p>` : ''}
     ${data.trip?.driverName ? `<p class="detail"><strong>Driver:</strong> ${data.trip.driverName}</p>` : ''}
     ${data.trip?.signedAt ? `<p class="detail"><strong>Delivered to:</strong> ${data.trip.signedByName ?? '—'} on ${new Date(data.trip.signedAt).toLocaleString()}</p>` : ''}
+    ${
+      data.trip?.checkpoints?.length
+        ? `<div class="checkpoints"><strong>Updates</strong>${data.trip.checkpoints
+            .map(
+              (cp) =>
+                `<div class="checkpoint"><div class="cp-dot"></div><div><div class="cp-note">${cp.note}</div><div class="cp-time">${new Date(cp.createdAt).toLocaleString()}</div></div></div>`,
+            )
+            .join('')}</div>`
+        : ''
+    }
     <div class="footer">Tracking powered by Fleet Ops</div>
   </div>
 </body>
