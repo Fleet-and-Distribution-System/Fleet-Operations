@@ -12,6 +12,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { FuelModule } from './fuel/fuel.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { FuelModule } from './fuel/fuel.module';
     TrackingModule,
     MaintenanceModule,
     FuelModule,
+    MessagesModule,
   ],
 })
 export class AppModule {}

@@ -1,0 +1,69 @@
+warning: in the working copy of 'prisma/schema.prisma', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/prisma/schema.prisma b/prisma/schema.prisma[m
+[1mindex e826744..90bf651 100644[m
+[1m--- a/prisma/schema.prisma[m
+[1m+++ b/prisma/schema.prisma[m
+[36m@@ -68,6 +68,7 @@[m [mmodel Company {[m
+   maintenanceRecords MaintenanceRecord[][m
+   fuelLogs       FuelLog[][m
+   checkpoints    TripCheckpoint[][m
+[32m+[m[32m  messages       Message[][m
+ }[m
+ [m
+ // ---- Identity ----[m
+[36m@@ -80,11 +81,13 @@[m [mmodel User {[m
+   email         String[m
+   phone         String?[m
+   passwordHash  String[m
+[32m+[m[32m  pin           String?   // hashed numeric PIN — optional alternative credential for driver quick-login[m
+   fullName      String[m
+   role          UserRole  @default(DISPATCHER)[m
+   isActive      Boolean   @default(true)[m
+ [m
+   driverProfile Driver?[m
+[32m+[m[32m  sentMessages  Message[][m
+ [m
+   createdAt     DateTime  @default(now())[m
+   updatedAt     DateTime  @updatedAt[m
+[36m@@ -145,6 +148,7 @@[m [mmodel Driver {[m
+ [m
+   vehicles        Vehicle[][m
+   trips           Trip[][m
+[32m+[m[32m  messages        Message[][m
+ [m
+   createdAt       DateTime  @default(now())[m
+   updatedAt       DateTime  @updatedAt[m
+[36m@@ -152,6 +156,33 @@[m [mmodel Driver {[m
+   @@index([companyId])[m
+ }[m
+ [m
+[32m+[m[32m// ---- Messaging (in-app admin <-> driver chat) ----[m
+[32m+[m[32m// One thread per driver: any company admin/dispatcher can view and reply to[m
+[32m+[m[32m// a driver's thread (not modeled as 1:1 per-admin, since dispatch is a shared[m
+[32m+[m[32m// responsibility across whoever's on shift). senderRole distinguishes which[m
+[32m+[m[32m// side of the conversation a message came from for UI alignment.[m
+[32m+[m
+[32m+[m[32mmodel Message {[m
+[32m+[m[32m  id          String    @id @default(uuid())[m
+[32m+[m[32m  companyId   String[m
+[32m+[m[32m  company     Company   @relation(fields: [companyId], references: [id])[m
+[32m+[m
+[32m+[m[32m  driverId    String[m
+[32m+[m[32m  driver      Driver    @relation(fields: [driverId], references: [id])[m
+[32m+[m
+[32m+[m[32m  senderId    String[m
+[32m+[m[32m  sender      User      @relation(fields: [senderId], references: [id])[m
+[32m+[m[32m  senderRole  UserRole[m
+[32m+[m
+[32m+[m[32m  body        String[m
+[32m+[m[32m  readAt      DateTime?[m
+[32m+[m
+[32m+[m[32m  createdAt   DateTime  @default(now())[m
+[32m+[m
+[32m+[m[32m  @@index([companyId])[m
+[32m+[m[32m  @@index([driverId])[m
+[32m+[m[32m}[m
+[32m+[m
+ // ---- Reference locations (depots, warehouses, customer sites) ----[m
+ // Adapted from the reference system's Locations concept: named, reusable places[m
+ // instead of free-text pickup/destination strings. Makes reporting and geofencing[m

@@ -68,6 +68,7 @@ model Company {
   maintenanceRecords MaintenanceRecord[]
   fuelLogs       FuelLog[]
   checkpoints    TripCheckpoint[]
+  messages       Message[]
 }
 
 // ---- Identity ----
@@ -80,11 +81,13 @@ model User {
   email         String
   phone         String?
   passwordHash  String
+  pin           String?   // hashed numeric PIN — optional alternative credential for driver quick-login
   fullName      String
   role          UserRole  @default(DISPATCHER)
   isActive      Boolean   @default(true)
 
   driverProfile Driver?
+  sentMessages  Message[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -145,11 +148,39 @@ model Driver {
 
   vehicles        Vehicle[]
   trips           Trip[]
+  messages        Message[]
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@index([companyId])
+}
+
+// ---- Messaging (in-app admin <-> driver chat) ----
+// One thread per driver: any company admin/dispatcher can view and reply to
+// a driver's thread (not modeled as 1:1 per-admin, since dispatch is a shared
+// responsibility across whoever's on shift). senderRole distinguishes which
+// side of the conversation a message came from for UI alignment.
+
+model Message {
+  id          String    @id @default(uuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id])
+
+  driverId    String
+  driver      Driver    @relation(fields: [driverId], references: [id])
+
+  senderId    String
+  sender      User      @relation(fields: [senderId], references: [id])
+  senderRole  UserRole
+
+  body        String
+  readAt      DateTime?
+
+  createdAt   DateTime  @default(now())
+
+  @@index([companyId])
+  @@index([driverId])
 }
 
 // ---- Reference locations (depots, warehouses, customer sites) ----
