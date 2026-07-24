@@ -12,6 +12,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { FuelModule } from './fuel/fuel.module';
+import { UsersModule } from './users/users.module';
 import { MessagesModule } from './messages/messages.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { MessagesModule } from './messages/messages.module';
     TrackingModule,
     MaintenanceModule,
     FuelModule,
+    UsersModule,
     MessagesModule,
   ],
 })
